@@ -1,6 +1,40 @@
 #!/bin/bash
 
 #######################################################################################################################
+# User manual
+
+# This script copies a file piece by piece (or chunk by chunk) from the current
+# machine to a remote machine.
+# A chunk is a portion of the file to send and has a size of ${CHUNK_SIZE}
+# bytes, the user can customize this value directly from the command line with option -c.
+# Given the chunk size, the number of chunks is determined as well.
+# 
+# Correctly transferred chunks are named on the remote host as:
+# cp_${CHUNK_SIZE}_<index>
+# where index is a number between 0 and (number of chunks - 1), padded with zeros.
+# 
+# Chunks in progress are named on the remote host as:
+# _cp_${CHUNK_SIZE}_<index>
+#
+# The script checks the transfers state listing the files on the remote host destination
+# directory.
+# For a given index, if no file exists on the remote host then the corresponding chunk is
+# considered to be doable.
+# If there are no doable chunks on the remote host, the script will take 2 "pictures" of
+# the remote host state at 2 different times, the files that are in progress in this 2
+# different moments but for which there are no updates will be deleted so the script can
+# try to upload them later on.
+#
+# On the local machine, the script does not split the file, instead, it will extract just
+# the chunk choosed to be sent. To confirm that the chunk has been properly transmitted,
+# md5sum command is used.
+#
+# This script can easily cause conflicts on the remote host. It will locally store the
+# remote user credentials in plain text. Use it if you don't have another choice.
+#
+# Run the script with -h options to list all the possible arguments.
+
+#######################################################################################################################
 # Parameters
 
 USERNAME=""

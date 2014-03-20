@@ -8,8 +8,7 @@ PASSWORD=""
 SERVER=""
 SOURCE_FILE=""
 DESTINATION_PATH=""
-CHUNK_SIZE="1048576"
-#CHUNK_SIZE="10485760"
+CHUNK_SIZE="10485760"
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKING_DIRECTORY=`pwd`
 PASSWORD_SCRIPT="${WORKING_DIRECTORY}/get_password.sh"
@@ -67,7 +66,7 @@ function setup_password_script {
 }
 
 function cleanup {
-    rm -f ${PASSWORD_SCRIPT} ${SSH_SESSION_SCRIPT} ${TRANSFERRED_FILES} ${REMOTE_COMMAND_LOG} ${LOG_FILE} ${FILE_CHUNK} ${TEMP_FILE_1} ${TEMP_FILE_2} ${TEMP_FILE_3}
+    rm -f ${PASSWORD_SCRIPT} ${SSH_SESSION_SCRIPT} ${TRANSFERRED_FILES} ${REMOTE_COMMAND_LOG} ${FILE_CHUNK} ${TEMP_FILE_1} ${TEMP_FILE_2} ${TEMP_FILE_3}
 }
 
 function fill_with_zeroes {
@@ -312,9 +311,9 @@ function clear_undone_chunks {
     fi
     cat ${TRANSFERRED_FILES} | grep "/${CHUNKS_BASENAME}" > ${TEMP_FILE_1}
 
-    display_info "Sleeping for ${SLEEP_TIME} seconds..."
+    display_info "    Sleeping for ${SLEEP_TIME} seconds..."
     sleep ${SLEEP_TIME}
-    display_info "Done!"
+    display_info "    Done!"
 
     display_info "    Checking out transfers state again..."
     RESULT=$(get_remote_files_list)
@@ -529,6 +528,7 @@ fi
 #######################################################################################################################
 # Closing work
 
+rm -f ${LOG_FILE} 
 cleanup
 
 touch ${LOG_FILE}

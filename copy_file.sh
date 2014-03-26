@@ -42,6 +42,7 @@ PASSWORD=""
 SERVER=""
 SOURCE_FILE=""
 DESTINATION_PATH=""
+EXIT_FROM_MAIN=false
 CHUNK_SIZE="10485760"
 SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKING_DIRECTORY=`pwd`
@@ -391,6 +392,7 @@ function main_loop {
     local CHUNKS_BASENAME
     local CURRENT_CHUNK
     local NUMBER_OF_CHUNKS
+    local TRANSFERRED_CHUNKS
     FILE_SIZE=`du -b ${SOURCE_FILE} | awk -F" " '{print $1}'`
     NUMBER_OF_CHUNKS=$(ceil ${FILE_SIZE} ${CHUNK_SIZE})
     if [ ${NUMBER_OF_CHUNKS} -gt 32767 ]
@@ -399,6 +401,7 @@ function main_loop {
         exit 1
     fi
     CHUNKS_BASENAME="cp_${CHUNK_SIZE}_"
+    TRANSFERRED_CHUNKS=0
 
 cat >> ${LOG_FILE} <<EOF
 
@@ -463,7 +466,9 @@ EOF
                     then
                         display_warning "    Unsuccessful."
                     else
+                        TRANSFERRED_CHUNKS=$(( ${TRANSFERRED_CHUNKS} + 1 ))
                         display_info "    Done!"
+                        display_info "Transferred chunks: ${TRANSFERRED_CHUNKS}"
                     fi
                 elif [ "${DOABLE}" == "KO" ]
                 then
@@ -475,12 +480,22 @@ EOF
                 break
             done       
         fi
+
+        if [ $EXIT_FROM_MAIN == true ]
+        then
+            break
+        fi
+
         SLEEP_TIME=$(( $RANDOM % 10 ))
         display_info "Sleeping for ${SLEEP_TIME} seconds..."
         sleep ${SLEEP_TIME}
         display_info "Done!"
         rm -f ${TRANSFERRED_FILES}
     done
+
+    echo ""
+    echo "########################################################################################"
+    display_info "Number of transferred chunks: ${TRANSFERRED_CHUNKS}"
 }
 
 #######################################################################################################################

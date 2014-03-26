@@ -78,18 +78,24 @@ cat << EOF
 EOF
 }
 
+function get_timestamp {
+    date "+[%Y/%m/%d %H:%M:%S]"
+}
+
 function display_info {
-    echo "INFO: $@" >> ${LOG_FILE}
+    echo "$(get_timestamp) INFO: $@" >> ${LOG_FILE}
 }
 
 function display_warning {
-    echo "WARNING: $@" >> ${LOG_FILE}
+    echo "$(get_timestamp) WARNING: $@" >> ${LOG_FILE}
 }
 
 function display_error {
-    echo "ERROR: $@" >> ${LOG_FILE}
-    echo "ERROR: $@" 1>&2
-    echo "ERROR: $@"
+    local TIMESTAMP
+    TIMESTAMP=$(get_timestamp)
+    echo "${TIMESTAMP} ERROR: $@" >> ${LOG_FILE}
+    echo "${TIMESTAMP} ERROR: $@" 1>&2
+    echo "${TIMESTAMP} ERROR: $@"
     exit 1
 }
 
@@ -395,9 +401,10 @@ function main_loop {
     CHUNKS_BASENAME="cp_${CHUNK_SIZE}_"
 
 cat >> ${LOG_FILE} <<EOF
-############################################
-# `date`
-############################################
+
+########################################################################################
+Start:
+    date:                 $(get_timestamp)
 Destination:
     server:               ${SERVER}
     directory:            ${DESTINATION_PATH}
@@ -408,7 +415,7 @@ Source:
     size:                 ${FILE_SIZE}
     chunk size:           ${CHUNK_SIZE}
     number of chunks:     ${NUMBER_OF_CHUNKS}
-############################################
+########################################################################################
 
 EOF
 

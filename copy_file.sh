@@ -55,6 +55,8 @@ TEMP_FILE_3="${WORKING_DIRECTORY}/temp_3"
 REMOTE_COMMAND_LOG="${WORKING_DIRECTORY}/remote.log"
 LOG_FILE="${WORKING_DIRECTORY}/output.log"
 FILE_CHUNK="${WORKING_DIRECTORY}/chunk.dat"
+BANDWIDTH_LIMIT=""
+ConnectTimeout="120"
 
 #######################################################################################################################
 # Helpers
@@ -67,14 +69,15 @@ cat << EOF
  Usage: $1 [options]
 
  OPTIONS:
- -h                 Print this help and exit
- -u                 Remote user username
- -p                 Remote user password
- -s <host name>     Remote server host name
- -f <filepath>      The file to copy
- -d <directory>     Where to copy the file on the remote server
- -c <chunk size>    Lets you customize the chunk size.
-                    Default value is: ${CHUNK_SIZE}B
+ -h                     Print this help and exit
+ -u                     Remote user username
+ -p                     Remote user password
+ -s <host name>         Remote server host name
+ -f <filepath>          The file to copy
+ -d <directory>         Where to copy the file on the remote server
+ -c <chunk size>        Lets you customize the chunk size.
+                        Default value is: ${CHUNK_SIZE}B
+ -l <number of Kbit/s>  scp bandwidth limit (in Kbit/s). Optional.      
 
 EOF
 }
@@ -132,7 +135,7 @@ function execute_remote_command {
     COMMAND=$1
 cat > ${SSH_SESSION_SCRIPT} <<EOF
 export SSH_ASKPASS="${PASSWORD_SCRIPT}"
-setsid ssh -o ConnectTimeout=10 ${USERNAME}@${SERVER} '${COMMAND}'
+setsid ssh -o ConnectTimeout=${ConnectTimeout} ${USERNAME}@${SERVER} '${COMMAND}'
 exit \$?
 EOF
     chmod +x ${SSH_SESSION_SCRIPT}
@@ -243,7 +246,7 @@ function copy_file {
 
 cat > ${SSH_SESSION_SCRIPT} <<EOF
 export SSH_ASKPASS="${PASSWORD_SCRIPT}"
-setsid scp -o ConnectTimeout=10 ${FILE_CHUNK} ${USERNAME}@${SERVER}:${DESTINATION_PATH}/${_CHUNK_NAME} > /dev/null 2>&1
+setsid scp ${BANDWIDTH_LIMIT} -o ConnectTimeout=${ConnectTimeout} ${FILE_CHUNK} ${USERNAME}@${SERVER}:${DESTINATION_PATH}/${_CHUNK_NAME} > /dev/null 2>&1
 exit \$?
 EOF
     chmod +x ${SSH_SESSION_SCRIPT}
@@ -393,6 +396,7 @@ function main_loop {
     local CURRENT_CHUNK
     local NUMBER_OF_CHUNKS
     local TRANSFERRED_CHUNKS
+    local BANDWIDTH_LIMIT_MESSAGE
     FILE_SIZE=`du -b ${SOURCE_FILE} | awk -F" " '{print $1}'`
     NUMBER_OF_CHUNKS=$(ceil ${FILE_SIZE} ${CHUNK_SIZE})
     if [ ${NUMBER_OF_CHUNKS} -gt 32767 ]
@@ -403,21 +407,31 @@ function main_loop {
     CHUNKS_BASENAME="cp_${CHUNK_SIZE}_"
     TRANSFERRED_CHUNKS=0
 
+    if [ "${BANDWIDTH_LIMIT}" != "" ]
+    then
+        BANDWIDTH_LIMIT_MESSAGE="`echo ${BANDWIDTH_LIMIT} | awk -F" " '{print $2}'` Kbit/s"
+    else
+        BANDWIDTH_LIMIT_MESSAGE="Not limited"
+    fi
+
 cat >> ${LOG_FILE} <<EOF
 
 ########################################################################################
 Start:
-    date:                 $(get_timestamp)
+    date:                   $(get_timestamp)
+Connection:
+    Connection timeout:     ${ConnectTimeout}s
+    Bandwidth limit:        ${BANDWIDTH_LIMIT_MESSAGE}
 Destination:
-    server:               ${SERVER}
-    directory:            ${DESTINATION_PATH}
-    remote user:          ${USERNAME}
-    remote user password: ${PASSWORD}
+    server:                 ${SERVER}
+    directory:              ${DESTINATION_PATH}
+    remote user:            ${USERNAME}
+    remote user password:   ${PASSWORD}
 Source:
-    file:                 ${SOURCE_FILE}
-    size:                 ${FILE_SIZE}
-    chunk size:           ${CHUNK_SIZE}
-    number of chunks:     ${NUMBER_OF_CHUNKS}
+    file:                   ${SOURCE_FILE}
+    size:                   ${FILE_SIZE}
+    chunk size:             ${CHUNK_SIZE}
+    number of chunks:       ${NUMBER_OF_CHUNKS}
 ########################################################################################
 
 EOF
@@ -498,7 +512,7 @@ EOF
 #######################################################################################################################
 # Options parsing
 
-while getopts "hu:p:s:f:d:c:" option
+while getopts "hu:p:s:f:d:c:l:" option
 do
     case ${option} in
         h)
@@ -522,6 +536,9 @@ do
             ;;
         c)
             CHUNK_SIZE=${OPTARG}
+            ;;
+        l)
+            BANDWIDTH_LIMIT=${OPTARG}
             ;;
         ?)
             print_usage $0
@@ -570,6 +587,17 @@ if [ -z "${CHUNK_SIZE}" ]
 then
     echo "ERROR: Please, give me a valid chunk size (in bytes)."
     ERROR="yes"
+fi
+
+if [ -n "${BANDWIDTH_LIMIT}" ]
+then
+    if [[ ${BANDWIDTH_LIMIT} =~ ^[1-9][0-9]*$ ]]
+    then
+        BANDWIDTH_LIMIT="-l ${BANDWIDTH_LIMIT}"    
+    else
+        echo "ERROR: The value specified for -l parameter is not valid."
+        ERROR="yes"
+    fi
 fi
 
 if [ "${ERROR}" == "yes" ]

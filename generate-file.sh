@@ -78,29 +78,6 @@ else
     fi
 fi
 
-if [ -z "${OUTPUT_FILENAME}" ]
-then
-    echo " ERROR: Please, specify the output file name."
-    PARAMETERS_ERROR="yes"
-else
-    if [ -f ${OUTPUT_FILENAME} ]
-    then
-        echo " WARNING: File ${OUTPUT_FILENAME} already exists, this script will rewrite it."
-        read -p " Are you sure you want to continue? [yN]: "
-        if [ "${REPLY}" != "y" -a "${REPLY}" != "Y" ]
-        then
-            PARAMETERS_ERROR="yes"
-        else
-            rm ${OUTPUT_FILENAME}
-            if [ $? -ne 0 ]
-            then
-                echo " ERROR: Impossible to delete file ${OUTPUT_FILENAME}."
-                PARAMETERS_ERROR="yes"
-            fi
-        fi
-    fi
-fi
-
 if [ -n "${FIRST_FILE}" ]
 then
     if [ ! -f ${FIRST_FILE} ]
@@ -134,6 +111,32 @@ then
             PARAMETERS_ERROR="yes"
         else
             LAST_FILE=$(basename ${LAST_FILE})
+        fi
+    fi
+fi
+
+if [ -z "${OUTPUT_FILENAME}" ]
+then
+    echo " ERROR: Please, specify the output file name."
+    PARAMETERS_ERROR="yes"
+else
+    if [ -f ${OUTPUT_FILENAME} ]
+    then
+        if [ -z "${FIRST_FILE}" -a -z "${LAST_FILE}" ]
+        then
+            echo " WARNING: File ${OUTPUT_FILENAME} already exists, this script will rewrite it."
+            read -p " Are you sure you want to continue? [yN]: "
+            if [ "${REPLY}" != "y" -a "${REPLY}" != "Y" ]
+            then
+                PARAMETERS_ERROR="yes"
+            else
+                rm ${OUTPUT_FILENAME}
+                if [ $? -ne 0 ]
+                then
+                    echo " ERROR: Impossible to delete file ${OUTPUT_FILENAME}."
+                    PARAMETERS_ERROR="yes"
+                fi
+            fi
         fi
     fi
 fi
